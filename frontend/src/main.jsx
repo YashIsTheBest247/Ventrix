@@ -12,12 +12,12 @@ if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <AccessGate>
-      <BrowserRouter>
+    <BrowserRouter>
+      <AccessGate>
         <ConfirmProvider>
           <App />
         </ConfirmProvider>
-      </BrowserRouter>
-    </AccessGate>
+      </AccessGate>
+    </BrowserRouter>
   </React.StrictMode>
 );

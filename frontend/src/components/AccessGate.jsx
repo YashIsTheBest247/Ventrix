@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { api, ACCESS_TOKEN_KEY } from "../api.js";
 
 const LEN = 6; // UI: number of digit boxes
@@ -13,6 +14,8 @@ export default function AccessGate({ children }) {
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
   const refs = useRef([]);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Is the gate enabled server-side?
   useEffect(() => {
@@ -25,6 +28,15 @@ export default function AccessGate({ children }) {
       alive = false;
     };
   }, []);
+
+  // Guard deep links: while locked, only the home preview ("/") is viewable.
+  // Any other path (typed or otherwise) bounces to home and opens the gate.
+  useEffect(() => {
+    if (enabled && !unlocked && location.pathname !== "/") {
+      setOpen(true);
+      navigate("/", { replace: true });
+    }
+  }, [enabled, unlocked, location.pathname, navigate]);
 
   // While locked, intercept clicks on any button/link → open the access box.
   useEffect(() => {
