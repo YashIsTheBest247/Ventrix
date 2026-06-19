@@ -5,6 +5,7 @@ import { api } from "./api.js";
 import NotificationsDrawer from "./components/NotificationsDrawer.jsx";
 import PipelineArt from "./components/PipelineArt.jsx";
 import StickyPad from "./components/StickyPad.jsx";
+import LinksMenu from "./components/LinksMenu.jsx";
 import Discover from "./pages/Discover.jsx";
 import Registered from "./pages/Registered.jsx";
 import Deadlines from "./pages/Deadlines.jsx";
@@ -93,6 +94,7 @@ export default function App() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <LinksMenu />
             <button
               className="bell"
               onClick={() => setDrawerOpen(true)}

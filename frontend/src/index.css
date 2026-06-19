@@ -217,6 +217,74 @@ button {
   font-size: 16px;
 }
 
+/* ── Platforms links menu ────────────────────────────── */
+.links-menu {
+  position: relative;
+}
+
+.links-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 290px;
+  max-width: 86vw;
+  background: var(--card);
+  border: 1.5px solid var(--frame-border);
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(17, 17, 17, 0.18);
+  padding: 8px;
+  z-index: 60;
+  animation: select-pop 0.16s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+
+.links-head {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  padding: 8px 12px 6px;
+}
+
+.links-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--ink);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.links-item:hover {
+  background: var(--ink);
+  color: #fff;
+}
+
+.links-name {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.links-tag {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.links-item:hover .links-tag {
+  color: #cfcfcf;
+}
+
+.links-arrow {
+  flex: none;
+  opacity: 0.5;
+}
+
+.links-item:hover .links-arrow {
+  opacity: 1;
+}
+
 /* ── Hero (inside the frame, home only) ──────────────── */
 .hero {
   display: grid;
