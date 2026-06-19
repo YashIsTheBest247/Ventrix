@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./hackify.db"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
+    # Invite-only access gate. Set ACCESS_CODE to enable it (enforced on the API).
+    # Leave blank to disable the gate entirely (e.g. local dev).
+    access_code: str = ""
+
     # SMTP / email reminders
     smtp_host: str = ""
     smtp_port: int = 587

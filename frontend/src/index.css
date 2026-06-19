@@ -1239,6 +1239,181 @@ button {
   }
 }
 
+/* ── Access gate ─────────────────────────────────────── */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg);
+}
+
+.gate-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border: 1.5px solid var(--frame-border);
+  border-radius: 26px;
+  box-shadow: 0 30px 70px rgba(17, 17, 17, 0.28);
+  padding: 34px 32px 26px;
+  text-align: center;
+  animation: pop-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.gate-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 24px;
+  line-height: 1;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+.gate-close:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.gate-card.shake {
+  animation: shake 0.35s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+.gate-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  border-radius: 16px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+}
+
+.gate-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+
+.gate-title {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+
+.gate-sub {
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  line-height: 1.5;
+  margin: 0 auto 24px;
+  max-width: 340px;
+}
+
+.otp {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.otp-box {
+  width: 46px;
+  height: 56px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  border-radius: 14px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.otp-box:focus {
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.otp-box.err {
+  border-color: var(--red);
+}
+
+.gate-error {
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.gate-btn {
+  width: 100%;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  padding: 15px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+
+.gate-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.gate-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.gate-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.gate-foot {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.gate-link {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-card,
+  .gate-card.shake {
+    animation: none;
+  }
+}
+
 /* ── Confirm modal ───────────────────────────────────── */
 .modal-backdrop {
   position: fixed;

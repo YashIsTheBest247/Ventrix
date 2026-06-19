@@ -3,11 +3,22 @@
 const ROOT = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const BASE = `${ROOT}/api`;
 
+export const ACCESS_TOKEN_KEY = "ventrix_access_token";
+
+function authHeaders() {
+  const t = localStorage.getItem(ACCESS_TOKEN_KEY);
+  return t ? { "X-Access-Token": t } : {};
+}
+
 async function req(path, options = {}) {
   const res = await fetch(BASE + path, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: { "Content-Type": "application/json", ...authHeaders(), ...(options.headers || {}) },
   });
+  if (res.status === 401 && !path.startsWith("/access")) {
+    // Token missing/stale — drop it so the gate reappears.
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  }
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -21,6 +32,11 @@ async function req(path, options = {}) {
 }
 
 export const api = {
+  // access gate
+  accessStatus: () => req(`/access/status`),
+  accessVerify: (code) =>
+    req(`/access/verify`, { method: "POST", body: JSON.stringify({ code }) }),
+
   // hackathons
   listHackathons: (params = {}) => {
     const q = new URLSearchParams();
