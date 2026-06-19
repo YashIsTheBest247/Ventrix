@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
@@ -11,6 +13,7 @@ from ..scrapers import detail
 from ..services import gmail_service
 
 router = APIRouter(prefix="/api/gmail", tags=["gmail"])
+log = logging.getLogger("ventrix.gmail")
 
 
 @router.get("/status")
@@ -53,12 +56,12 @@ def callback(code: str = "", state: str = "", session: Session = Depends(get_ses
     then bounces the browser back to the frontend."""
     front = settings.frontend_url.rstrip("/")
     if not code:
+        log.warning("Gmail callback hit without a code param")
         return RedirectResponse(f"{front}/registered?gmail=error")
-    try:
-        result = gmail_service.exchange_code(session, code, state or None)
-        ok = result.get("ok")
-    except Exception:
-        ok = False
+    result = gmail_service.exchange_code(session, code, state or None)
+    ok = result.get("ok")
+    if not ok:
+        log.error("Gmail callback failed: %s", result.get("error"))
     return RedirectResponse(f"{front}/registered?gmail={'connected' if ok else 'error'}")
 
 

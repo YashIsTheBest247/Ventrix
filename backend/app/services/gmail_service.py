@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 import re
 from typing import List, Optional
@@ -10,6 +11,12 @@ from sqlmodel import Session, select
 
 from ..config import settings
 from ..models import AppSetting
+
+# Google often grants extra scopes (openid/profile) alongside the one we asked
+# for; without this, oauthlib raises "Scope has changed" and the exchange fails.
+os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
+
+log = logging.getLogger("ventrix.gmail")
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
@@ -155,12 +162,16 @@ def exchange_code(session: Session, code: str, state: Optional[str]) -> dict:
     config = _client_config()
     if not config:
         return {"ok": False, "error": "No OAuth client configured"}
-    flow = Flow.from_client_config(
-        config, scopes=SCOPES, redirect_uri=settings.gmail_redirect_uri, state=state
-    )
-    flow.fetch_token(code=code)
-    _save_credentials(session, flow.credentials)
-    return {"ok": True}
+    try:
+        flow = Flow.from_client_config(
+            config, scopes=SCOPES, redirect_uri=settings.gmail_redirect_uri, state=state
+        )
+        flow.fetch_token(code=code)
+        _save_credentials(session, flow.credentials)
+        return {"ok": True}
+    except Exception as exc:  # noqa: BLE001 - surface the real reason in logs
+        log.exception("Gmail token exchange failed")
+        return {"ok": False, "error": str(exc)[:300]}
 
 
 # ── inbox scan ───────────────────────────────────────────
