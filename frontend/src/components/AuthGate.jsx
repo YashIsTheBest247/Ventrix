@@ -9,6 +9,7 @@ export default function AuthGate({ children }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [introDone, setIntroDone] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -55,6 +56,30 @@ export default function AuthGate({ children }) {
 
   return (
     <div className="gate">
+      <video
+        className="gate-video"
+        autoPlay
+        muted
+        playsInline
+        poster="/auth-bg.jpg"
+        onEnded={() => setIntroDone(true)}
+        onError={() => setIntroDone(true)}
+      >
+        <source src="/auth-bg.mp4" type="video/mp4" />
+      </video>
+      <div className="gate-overlay" />
+
+      {!introDone && (
+        <button
+          type="button"
+          className="gate-skip"
+          onClick={() => setIntroDone(true)}
+        >
+          Skip intro →
+        </button>
+      )}
+
+      {introDone && (
       <form className="gate-card" onSubmit={submit}>
         <div className="gate-icon">
           <WaveMark />
@@ -106,6 +131,7 @@ export default function AuthGate({ children }) {
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 }
