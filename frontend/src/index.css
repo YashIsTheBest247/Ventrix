@@ -9,6 +9,8 @@
   --line: #e7e7e5;
   --frame-border: #1a1a1a;
   --accent: #111111;
+  --accent-ink: #ffffff;
+  --accent-ink-soft: #cfcfcf;
   --green: #2f7d4f;
   --green-bg: #e4efe6;
   --amber: #9a6a16;
@@ -19,6 +21,96 @@
   --radius-sm: 14px;
   --shadow: 0 1px 2px rgba(17, 17, 17, 0.04), 0 8px 30px rgba(17, 17, 17, 0.05);
   font-family: "Quicksand", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/* ── Dark theme (AutoCare-style near-black slate) ────── */
+[data-theme="dark"] {
+  --bg: #0c0c0e;
+  --surface: #161618;
+  --surface-2: #202023;
+  --card: #151517;
+  --ink: #f4f4f5;
+  --ink-soft: #a6a6ad;
+  --ink-faint: #6e6e76;
+  --line: #2a2a2e;
+  --frame-border: #2e2e33;
+  --accent: #f4f4f5;
+  --accent-ink: #0e0e10;
+  --accent-ink-soft: #565659;
+  --green: #4caf6e;
+  --green-bg: #18301f;
+  --amber: #d6a44a;
+  --amber-bg: #322814;
+  --red: #e0695b;
+  --red-bg: #341d1a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 34px rgba(0, 0, 0, 0.45);
+}
+
+/* Surfaces that were hardcoded light → darken in dark mode */
+[data-theme="dark"] .hero-pill {
+  background: var(--surface);
+}
+[data-theme="dark"] .hero-media {
+  background: linear-gradient(160deg, #1a1a1d 0%, #101012 100%);
+}
+[data-theme="dark"] .panel {
+  background: linear-gradient(165deg, #19191c 0%, #141416 100%);
+}
+[data-theme="dark"] .search {
+  border-color: var(--line);
+}
+
+/* Filled (ink/accent-background) elements: flip text to dark in dark mode */
+[data-theme="dark"] .iconnav a.active,
+[data-theme="dark"] .btn.primary,
+[data-theme="dark"] .pill.active,
+[data-theme="dark"] .select-control:hover,
+[data-theme="dark"] .select.open .select-control,
+[data-theme="dark"] .select-option:hover,
+[data-theme="dark"] .links-item:hover,
+[data-theme="dark"] .sticky-addbtn,
+[data-theme="dark"] .sticky-save,
+[data-theme="dark"] .sticky-fab-count,
+[data-theme="dark"] .toast {
+  color: var(--accent-ink);
+}
+
+[data-theme="dark"] .select-control:hover .select-placeholder,
+[data-theme="dark"] .select.open .select-placeholder,
+[data-theme="dark"] .links-item:hover .links-tag {
+  color: var(--accent-ink-soft);
+}
+
+/* Sticky pad: dark slate instead of paper-yellow */
+[data-theme="dark"] .sticky-pad {
+  background: #161618;
+}
+[data-theme="dark"] .sticky-head {
+  background: #1d1d20;
+  border-bottom-color: var(--line);
+}
+[data-theme="dark"] .sticky-add {
+  border-bottom-color: var(--line);
+}
+[data-theme="dark"] .sticky-input,
+[data-theme="dark"] .sticky-edit {
+  background: #0f0f11;
+  border-color: var(--line);
+  color: var(--ink);
+}
+[data-theme="dark"] .sticky-item {
+  background: #1b1b1e;
+  border-color: var(--line);
+}
+[data-theme="dark"] .sticky-check {
+  background: #0f0f11;
+}
+[data-theme="dark"] .sticky-check.on {
+  background: var(--green);
+  border-color: var(--green);
+}
+[data-theme="dark"] .sticky-fab {
+  background: var(--surface);
 }
 
 * {

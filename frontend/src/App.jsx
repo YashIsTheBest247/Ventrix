@@ -18,8 +18,18 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [stats, setStats] = useState({ all: 0, tracked: 0, soon: 0 });
+  const [theme, setTheme] = useState(
+    () => document.documentElement.dataset.theme || "light"
+  );
   const toastTimer = useRef(null);
   const location = useLocation();
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("ventrix_theme", next);
+  }
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -94,6 +104,14 @@ export default function App() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <button
+              className="bell"
+              onClick={toggleTheme}
+              aria-label="Toggle dark mode"
+              title="Toggle dark mode"
+            >
+              {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+            </button>
             <LinksMenu />
             <button
               className="bell"
@@ -236,6 +254,23 @@ function BellNavIcon() {
     <svg viewBox="0 0 24 24" {...S} aria-hidden="true">
       <path d="M6 16 V11 a6 6 0 0 1 12 0 V16 L20 18 H4 Z" />
       <path d="M10 21 a2.2 2.2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <path d="M20 14.5 A8 8 0 0 1 9.5 4 A7 7 0 1 0 20 14.5 Z" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 2.5 V5 M12 19 V21.5 M2.5 12 H5 M19 12 H21.5 M5.2 5.2 L7 7 M17 17 L18.8 18.8 M18.8 5.2 L17 7 M7 17 L5.2 18.8" />
     </svg>
   );
 }
