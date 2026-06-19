@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     # Gmail OAuth
     google_client_secret_file: str = "google_client_secret.json"
     google_token_file: str = "google_token.json"
+    # In production the secret file isn't deployed — paste its JSON here instead.
+    google_client_secret_json: str = ""
+    # Set this (e.g. https://api.example.com/api/gmail/callback) to enable the
+    # redirect-based WEB OAuth flow. Leave blank for the local desktop flow.
+    gmail_redirect_uri: str = ""
+    # Where to send the browser back to after the OAuth callback.
+    frontend_url: str = "http://localhost:5173"
 
     # ── AI problem-statement analyzer (all free options) ──────────────
     # Provider: auto | gemini | groq | ollama | none

@@ -31,6 +31,13 @@ export default function Registered({ onToast, onChanged }) {
   useEffect(() => {
     load();
     loadGmail();
+    // Handle the OAuth callback return (?gmail=connected|error).
+    const params = new URLSearchParams(window.location.search);
+    const g = params.get("gmail");
+    if (g) {
+      onToast?.(g === "connected" ? "Gmail connected" : "Gmail connection failed");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -56,9 +63,13 @@ export default function Registered({ onToast, onChanged }) {
   }
 
   async function connectGmail() {
-    onToast?.("A Google consent window will open in your browser…");
     try {
-      await api.gmailConnect();
+      const res = await api.gmailConnect();
+      if (res?.auth_url) {
+        // Web flow: hand off to Google's consent screen.
+        window.location.href = res.auth_url;
+        return;
+      }
       onToast?.("Gmail connected");
       await loadGmail();
     } catch (e) {

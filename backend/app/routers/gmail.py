@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
+from ..config import settings
 from ..database import get_session
 from ..models import Hackathon, Registration
 from ..scrapers import detail
@@ -12,24 +14,32 @@ router = APIRouter(prefix="/api/gmail", tags=["gmail"])
 
 
 @router.get("/status")
-def status():
+def status(session: Session = Depends(get_session)):
     return {
         "configured": gmail_service.is_configured(),
-        "connected": gmail_service.is_connected(),
+        "connected": gmail_service.is_connected(session),
+        "mode": "web" if gmail_service.is_web_mode() else "local",
     }
 
 
 @router.post("/connect")
-def connect():
-    """Run the local OAuth consent flow (opens a browser on the host machine)."""
+def connect(session: Session = Depends(get_session)):
+    """Web mode: returns {auth_url} for the browser to redirect to.
+    Local mode: opens a consent window on the host machine and connects."""
     if not gmail_service.is_configured():
         raise HTTPException(
             400,
-            "Missing backend/google_client_secret.json. Create an OAuth 'Desktop "
-            "app' client in Google Cloud Console and save it there.",
+            "No OAuth client configured. Add backend/google_client_secret.json "
+            "(local) or set GOOGLE_CLIENT_SECRET_JSON (prod).",
         )
+    if gmail_service.is_web_mode():
+        result = gmail_service.build_auth_url(session)
+        if not result.get("ok"):
+            raise HTTPException(400, result.get("error", "connect failed"))
+        return {"auth_url": result["auth_url"]}
+
     try:
-        result = gmail_service.connect()
+        result = gmail_service.connect_local(session)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(500, f"OAuth failed: {exc}")
     if not result.get("ok"):
@@ -37,19 +47,33 @@ def connect():
     return {"connected": True}
 
 
+@router.get("/callback")
+def callback(code: str = "", state: str = "", session: Session = Depends(get_session)):
+    """OAuth redirect target (web mode). Exchanges the code, stores the token,
+    then bounces the browser back to the frontend."""
+    front = settings.frontend_url.rstrip("/")
+    if not code:
+        return RedirectResponse(f"{front}/registered?gmail=error")
+    try:
+        result = gmail_service.exchange_code(session, code, state or None)
+        ok = result.get("ok")
+    except Exception:
+        ok = False
+    return RedirectResponse(f"{front}/registered?gmail={'connected' if ok else 'error'}")
+
+
 @router.post("/disconnect")
-def disconnect():
-    gmail_service.disconnect()
+def disconnect(session: Session = Depends(get_session)):
+    gmail_service.disconnect(session)
     return {"connected": False}
 
 
 @router.post("/scan")
 def scan_and_import(session: Session = Depends(get_session), max_results: int = 30):
-    """Scan Gmail for registration emails and import them as registrations."""
-    if not gmail_service.is_connected():
+    if not gmail_service.is_connected(session):
         raise HTTPException(400, "Gmail not connected")
     try:
-        candidates = gmail_service.scan(max_results=max_results)
+        candidates = gmail_service.scan(session, max_results=max_results)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(500, f"Scan failed: {exc}")
 

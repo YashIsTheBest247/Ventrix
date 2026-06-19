@@ -1,4 +1,7 @@
-const BASE = "/api";
+// In dev, BASE is "/api" (Vite proxies to the backend). In production set
+// VITE_API_BASE_URL to your backend origin (e.g. https://ventrix-api.onrender.com).
+const ROOT = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const BASE = `${ROOT}/api`;
 
 async function req(path, options = {}) {
   const res = await fetch(BASE + path, {

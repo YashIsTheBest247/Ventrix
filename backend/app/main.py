@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .database import init_db
+from .database import engine, init_db
 from .routers import (
     analyze,
     gmail,
@@ -22,9 +22,19 @@ from .services.scheduler import shutdown_scheduler, start_scheduler
 logging.basicConfig(level=logging.INFO)
 
 
+log = logging.getLogger("ventrix")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    backend = engine.dialect.name  # "postgresql" or "sqlite"
+    log.info("Database backend: %s", backend)
+    if backend == "sqlite":
+        log.warning(
+            "Using SQLite — on an ephemeral host (e.g. Render free tier) data "
+            "resets on redeploy. Set DATABASE_URL to a Postgres URL to persist."
+        )
     start_scheduler()
     yield
     shutdown_scheduler()
@@ -53,6 +63,8 @@ app.include_router(sticky.router)
 def health():
     return {
         "status": "ok",
+        "db": engine.dialect.name,  # "postgresql" once DATABASE_URL is set, else "sqlite"
+        "db_persistent": engine.dialect.name != "sqlite",
         "email_enabled": settings.email_enabled,
-        "gmail_configured": settings.cors_origins is not None,
+        "ai_provider": settings.resolved_ai_provider,
     }

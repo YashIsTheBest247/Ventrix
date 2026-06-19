@@ -68,6 +68,14 @@ class StickyItem(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class AppSetting(SQLModel, table=True):
+    """Simple key/value store for server-side state (e.g. the Gmail OAuth token),
+    kept in the DB so it survives ephemeral-filesystem restarts on cloud hosts."""
+
+    key: str = Field(primary_key=True)
+    value: str = ""
+
+
 class NotificationLog(SQLModel, table=True):
     """In-app + email notifications. `read` drives the in-app unread badge."""
 
