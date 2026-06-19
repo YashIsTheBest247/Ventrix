@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
@@ -57,12 +58,13 @@ def callback(code: str = "", state: str = "", session: Session = Depends(get_ses
     front = settings.frontend_url.rstrip("/")
     if not code:
         log.warning("Gmail callback hit without a code param")
-        return RedirectResponse(f"{front}/registered?gmail=error")
+        return RedirectResponse(f"{front}/registered?gmail=error&reason=no_code")
     result = gmail_service.exchange_code(session, code, state or None)
-    ok = result.get("ok")
-    if not ok:
-        log.error("Gmail callback failed: %s", result.get("error"))
-    return RedirectResponse(f"{front}/registered?gmail={'connected' if ok else 'error'}")
+    if result.get("ok"):
+        return RedirectResponse(f"{front}/registered?gmail=connected")
+    reason = result.get("error", "unknown")
+    log.error("Gmail callback failed: %s", reason)
+    return RedirectResponse(f"{front}/registered?gmail=error&reason={quote(reason)}")
 
 
 @router.post("/disconnect")

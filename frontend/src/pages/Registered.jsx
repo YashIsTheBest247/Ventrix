@@ -35,7 +35,12 @@ export default function Registered({ onToast, onChanged }) {
     const params = new URLSearchParams(window.location.search);
     const g = params.get("gmail");
     if (g) {
-      onToast?.(g === "connected" ? "Gmail connected" : "Gmail connection failed");
+      if (g === "connected") {
+        onToast?.("Gmail connected");
+      } else {
+        const reason = params.get("reason");
+        onToast?.(reason ? `Gmail failed: ${reason}` : "Gmail connection failed");
+      }
       window.history.replaceState({}, "", window.location.pathname);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
