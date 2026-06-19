@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { api } from "./api.js";
 import NotificationsDrawer from "./components/NotificationsDrawer.jsx";
@@ -23,6 +23,21 @@ export default function App() {
   );
   const toastTimer = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  function onSearchKey(e) {
+    if (e.key !== "Enter") return;
+    const onHome = location.pathname === "/";
+    if (!onHome) navigate("/");
+    setTimeout(
+      () => {
+        document
+          .getElementById("all-hackathons")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      },
+      onHome ? 0 : 160
+    );
+  }
 
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
@@ -102,6 +117,7 @@ export default function App() {
                 placeholder="Search hackathons…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={onSearchKey}
               />
             </div>
             <button

@@ -49,7 +49,7 @@ export default function Discover({ search, onToast }) {
   }
 
   return (
-    <div>
+    <div id="all-hackathons" style={{ scrollMarginTop: "16px" }}>
       <div className="row-between">
         <div>
           <div className="eyebrow">Step 01 — Discover</div>

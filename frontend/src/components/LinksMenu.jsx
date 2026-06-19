@@ -15,7 +15,19 @@ const PLATFORMS = [
 
 export default function LinksMenu() {
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState(null);
   const ref = useRef(null);
+  const btnRef = useRef(null);
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const r = btnRef.current.getBoundingClientRect();
+    setCoords({ top: r.bottom + 10, right: window.innerWidth - r.right });
+    setOpen(true);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -23,19 +35,26 @@ export default function LinksMenu() {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
     const onKey = (e) => e.key === "Escape" && setOpen(false);
+    // Position is fixed to the viewport, so close on scroll/resize to avoid drift.
+    const onScrollResize = () => setOpen(false);
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onScrollResize);
+    window.addEventListener("scroll", onScrollResize, true);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onScrollResize);
+      window.removeEventListener("scroll", onScrollResize, true);
     };
   }, [open]);
 
   return (
     <div className="links-menu" ref={ref}>
       <button
+        ref={btnRef}
         className="bell"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
         aria-label="Hackathon platforms"
         aria-expanded={open}
         title="Hackathon platforms"
@@ -43,8 +62,12 @@ export default function LinksMenu() {
         <GridIcon />
       </button>
 
-      {open && (
-        <div className="links-pop" role="menu">
+      {open && coords && (
+        <div
+          className="links-pop"
+          role="menu"
+          style={{ position: "fixed", top: coords.top, right: coords.right }}
+        >
           <div className="links-head">Hackathon platforms</div>
           {PLATFORMS.map((p) => (
             <a
