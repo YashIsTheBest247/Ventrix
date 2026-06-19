@@ -8,8 +8,9 @@ from sqlmodel import Session
 
 from ..config import settings
 from ..database import get_session
-from ..models import Hackathon
+from ..models import Hackathon, User
 from ..services import analyzer
+from .auth import get_current_user
 
 router = APIRouter(prefix="/api/analyze", tags=["analyze"])
 
@@ -36,7 +37,11 @@ def status():
 
 
 @router.post("")
-def analyze(payload: AnalyzeRequest, session: Session = Depends(get_session)):
+def analyze(
+    payload: AnalyzeRequest,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
     theme = (payload.theme or "").strip()
     title = payload.title
 

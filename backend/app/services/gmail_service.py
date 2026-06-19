@@ -7,40 +7,36 @@ import os
 import re
 from typing import List, Optional
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from ..config import settings
 from ..models import AppSetting
 
-# Google often grants extra scopes (openid/profile) alongside the one we asked
-# for; without this, oauthlib raises "Scope has changed" and the exchange fails.
+# Google often grants extra scopes (openid/profile); without this oauthlib raises
+# "Scope has changed" and the exchange fails.
 os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
 
 log = logging.getLogger("ventrix.gmail")
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
-TOKEN_KEY = "gmail_token"
-STATE_KEY = "gmail_oauth_state"
-VERIFIER_KEY = "gmail_code_verifier"
-
-# Senders that mean "you registered for a hackathon".
 SENDER_QUERY = (
     "from:devpost.com OR from:devfolio.co OR from:mlh.io OR from:unstop.com "
     "OR from:hackerearth.com"
 )
 SUBJECT_HINTS = (
-    "registered",
-    "registration",
-    "you're in",
-    "you are in",
-    "confirmed",
-    "thanks for registering",
-    "welcome to",
-    "submission",
+    "registered", "registration", "you're in", "you are in", "confirmed",
+    "thanks for registering", "welcome to", "submission",
 )
-
 URL_RE = re.compile(r"https?://[^\s\"'<>]+")
+
+
+def _token_key(uid: int) -> str:
+    return f"gmail_token:{uid}"
+
+
+def _pending_key(state: str) -> str:
+    return f"gmail_pending:{state}"
 
 
 # ── configuration / mode ─────────────────────────────────
@@ -51,7 +47,6 @@ def _secret_path() -> str:
 
 
 def _client_config() -> Optional[dict]:
-    """OAuth client config from env JSON (prod) or the local secret file (dev)."""
     if settings.google_client_secret_json.strip():
         try:
             return json.loads(settings.google_client_secret_json)
@@ -72,7 +67,7 @@ def is_web_mode() -> bool:
     return bool(settings.gmail_redirect_uri.strip())
 
 
-# ── DB-backed key/value ──────────────────────────────────
+# ── DB key/value ─────────────────────────────────────────
 
 def _get(session: Session, key: str) -> Optional[str]:
     row = session.get(AppSetting, key)
@@ -96,40 +91,33 @@ def _delete(session: Session, key: str) -> None:
         session.commit()
 
 
-def is_connected(session: Session) -> bool:
-    return _get(session, TOKEN_KEY) is not None
+def is_connected(session: Session, user_id: int) -> bool:
+    return _get(session, _token_key(user_id)) is not None
 
 
-# ── credentials ──────────────────────────────────────────
+# ── credentials (per user) ───────────────────────────────
 
-def _load_credentials(session: Session):
+def _load_credentials(session: Session, user_id: int):
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
 
-    raw = _get(session, TOKEN_KEY)
+    raw = _get(session, _token_key(user_id))
     if not raw:
         return None
     creds = Credentials.from_authorized_user_info(json.loads(raw), SCOPES)
     if creds and creds.expired and creds.refresh_token:
         creds.refresh(Request())
-        _set(session, TOKEN_KEY, creds.to_json())
+        _set(session, _token_key(user_id), creds.to_json())
     return creds
 
 
-def _save_credentials(session: Session, creds) -> None:
-    _set(session, TOKEN_KEY, creds.to_json())
+def disconnect(session: Session, user_id: int) -> None:
+    _delete(session, _token_key(user_id))
 
 
-def disconnect(session: Session) -> None:
-    _delete(session, TOKEN_KEY)
-    _delete(session, STATE_KEY)
-    _delete(session, VERIFIER_KEY)
+# ── connect flows ────────────────────────────────────────
 
-
-# ── connect: local desktop flow OR web redirect flow ─────
-
-def connect_local(session: Session) -> dict:
-    """Desktop flow — opens a browser on the host machine (dev only)."""
+def connect_local(session: Session, user_id: int) -> dict:
     from google_auth_oauthlib.flow import InstalledAppFlow
 
     config = _client_config()
@@ -137,12 +125,11 @@ def connect_local(session: Session) -> dict:
         return {"ok": False, "error": "No OAuth client configured"}
     flow = InstalledAppFlow.from_client_config(config, SCOPES)
     creds = flow.run_local_server(port=0, prompt="consent")
-    _save_credentials(session, creds)
+    _set(session, _token_key(user_id), creds.to_json())
     return {"ok": True}
 
 
-def build_auth_url(session: Session) -> dict:
-    """Web flow — return a Google consent URL for the browser to redirect to."""
+def build_auth_url(session: Session, user_id: int) -> dict:
     from google_auth_oauthlib.flow import Flow
 
     config = _client_config()
@@ -154,11 +141,13 @@ def build_auth_url(session: Session) -> dict:
     auth_url, state = flow.authorization_url(
         access_type="offline", include_granted_scopes="true", prompt="consent"
     )
-    _set(session, STATE_KEY, state)
-    # PKCE: the verifier generated here must be replayed at token exchange,
-    # which happens in a separate request — so persist it.
-    if getattr(flow, "code_verifier", None):
-        _set(session, VERIFIER_KEY, flow.code_verifier)
+    # Remember which user started this flow + the PKCE verifier, keyed by state,
+    # because the callback arrives with no auth header.
+    _set(
+        session,
+        _pending_key(state),
+        json.dumps({"user_id": user_id, "verifier": getattr(flow, "code_verifier", None)}),
+    )
     return {"ok": True, "auth_url": auth_url}
 
 
@@ -168,31 +157,37 @@ def exchange_code(session: Session, code: str, state: Optional[str]) -> dict:
     config = _client_config()
     if not config:
         return {"ok": False, "error": "No OAuth client configured"}
+    if not state:
+        return {"ok": False, "error": "missing state"}
+    raw = _get(session, _pending_key(state))
+    if not raw:
+        return {"ok": False, "error": "unknown or expired state"}
+    pending = json.loads(raw)
+    user_id = pending.get("user_id")
+    verifier = pending.get("verifier")
     try:
         flow = Flow.from_client_config(
             config, scopes=SCOPES, redirect_uri=settings.gmail_redirect_uri, state=state
         )
-        # Replay the PKCE verifier saved when the auth URL was built.
-        verifier = _get(session, VERIFIER_KEY)
         if verifier:
             flow.code_verifier = verifier
         flow.fetch_token(code=code)
-        _save_credentials(session, flow.credentials)
-        return {"ok": True}
-    except Exception as exc:  # noqa: BLE001 - surface the real reason in logs
+        _set(session, _token_key(user_id), flow.credentials.to_json())
+        _delete(session, _pending_key(state))
+        return {"ok": True, "user_id": user_id}
+    except Exception as exc:  # noqa: BLE001
         log.exception("Gmail token exchange failed")
         return {"ok": False, "error": str(exc)[:300]}
 
 
-# ── inbox scan ───────────────────────────────────────────
+# ── inbox scan (per user) ────────────────────────────────
 
 def _extract_text(payload) -> str:
     parts = payload.get("parts")
     if parts:
         chunks = [_extract_text(p) for p in parts]
         return "\n".join(c for c in chunks if c)
-    body = payload.get("body", {})
-    data = body.get("data")
+    data = payload.get("body", {}).get("data")
     if not data:
         return ""
     try:
@@ -201,17 +196,18 @@ def _extract_text(payload) -> str:
         return ""
 
 
-def scan(session: Session, max_results: int = 30) -> List[dict]:
+def scan(session: Session, user_id: int, max_results: int = 30) -> List[dict]:
     from googleapiclient.discovery import build
 
-    creds = _load_credentials(session)
+    creds = _load_credentials(session, user_id)
     if not creds:
         raise RuntimeError("Gmail not connected")
 
     service = build("gmail", "v1", credentials=creds, cache_discovery=False)
-    query = f"({SENDER_QUERY})"
     listing = (
-        service.users().messages().list(userId="me", q=query, maxResults=max_results).execute()
+        service.users().messages().list(
+            userId="me", q=f"({SENDER_QUERY})", maxResults=max_results
+        ).execute()
     )
     candidates: List[dict] = []
     for ref in listing.get("messages", []):
@@ -228,8 +224,6 @@ def scan(session: Session, max_results: int = 30) -> List[dict]:
                 "title": _clean_title(subject),
                 "url": _pick_hackathon_url(text, sender),
                 "source": _source_from_sender(sender),
-                "sender": sender,
-                "subject": subject,
             }
         )
     return candidates

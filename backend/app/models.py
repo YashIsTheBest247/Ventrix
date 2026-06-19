@@ -8,6 +8,24 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class User(SQLModel, table=True):
+    """An account. Email is the login identity."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(index=True, unique=True)
+    password_hash: str
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class Session(SQLModel, table=True):
+    """A login session token → user. Looked up on every authed request."""
+
+    token: str = Field(primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+    expires_at: Optional[datetime] = None
+
+
 class Hackathon(SQLModel, table=True):
     """A hackathon discovered by a scraper or added manually."""
 
@@ -38,6 +56,7 @@ class Registration(SQLModel, table=True):
     """A hackathon the user has registered for / is tracking."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
     hackathon_id: int = Field(foreign_key="hackathon.id", index=True)
     status: str = "registered"                 # registered | interested | submitted | done
     source: str = "manual"                     # manual | gmail
@@ -49,6 +68,7 @@ class Note(SQLModel, table=True):
     """A free-form note, optionally pinned to a hackathon."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
     hackathon_id: Optional[int] = Field(default=None, foreign_key="hackathon.id", index=True)
     title: str = ""
     body: str = ""
@@ -60,6 +80,7 @@ class StickyItem(SQLModel, table=True):
     """A pinned reminder on the floating sticky pad (event name + date + done)."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
     name: str
     date: Optional[str] = None          # ISO "YYYY-MM-DD" or free text
     done: bool = False
@@ -80,6 +101,7 @@ class NotificationLog(SQLModel, table=True):
     """In-app + email notifications. `read` drives the in-app unread badge."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
     hackathon_id: Optional[int] = Field(default=None, foreign_key="hackathon.id", index=True)
     kind: str = "deadline"                     # deadline | system
     title: str

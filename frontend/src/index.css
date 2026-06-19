@@ -1371,6 +1371,29 @@ button {
   margin-bottom: 14px;
 }
 
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.auth-fields .input {
+  border-width: 1.5px;
+  border-radius: 14px;
+  padding: 13px 15px;
+}
+
+.auth-switch {
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
 .gate-btn {
   width: 100%;
   border: none;

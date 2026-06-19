@@ -82,7 +82,8 @@ class Settings(BaseSettings):
 
     @property
     def email_enabled(self) -> bool:
-        return bool(self.smtp_host and self.smtp_user and self.reminder_email)
+        # Per-user recipients are passed explicitly; we just need a working SMTP.
+        return bool(self.smtp_host and self.smtp_user)
 
 
 @lru_cache

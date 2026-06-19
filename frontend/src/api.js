@@ -3,11 +3,11 @@
 const ROOT = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const BASE = `${ROOT}/api`;
 
-export const ACCESS_TOKEN_KEY = "ventrix_access_token";
+export const AUTH_TOKEN_KEY = "ventrix_auth_token";
 
 function authHeaders() {
-  const t = localStorage.getItem(ACCESS_TOKEN_KEY);
-  return t ? { "X-Access-Token": t } : {};
+  const t = localStorage.getItem(AUTH_TOKEN_KEY);
+  return t ? { "X-Auth-Token": t } : {};
 }
 
 async function req(path, options = {}) {
@@ -15,9 +15,10 @@ async function req(path, options = {}) {
     ...options,
     headers: { "Content-Type": "application/json", ...authHeaders(), ...(options.headers || {}) },
   });
-  if (res.status === 401 && !path.startsWith("/access")) {
-    // Token missing/stale — drop it so the gate reappears.
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  if (res.status === 401 && !path.startsWith("/auth")) {
+    // Session missing/stale — drop it and bounce to the login gate.
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    window.dispatchEvent(new Event("ventrix-unauthorized"));
   }
   if (!res.ok) {
     let detail = res.statusText;
@@ -32,10 +33,13 @@ async function req(path, options = {}) {
 }
 
 export const api = {
-  // access gate
-  accessStatus: () => req(`/access/status`),
-  accessVerify: (code) =>
-    req(`/access/verify`, { method: "POST", body: JSON.stringify({ code }) }),
+  // auth
+  me: () => req(`/auth/me`),
+  login: (email, password) =>
+    req(`/auth/login`, { method: "POST", body: JSON.stringify({ email, password }) }),
+  signup: (email, password) =>
+    req(`/auth/signup`, { method: "POST", body: JSON.stringify({ email, password }) }),
+  logout: () => req(`/auth/logout`, { method: "POST" }),
 
   // hackathons
   listHackathons: (params = {}) => {

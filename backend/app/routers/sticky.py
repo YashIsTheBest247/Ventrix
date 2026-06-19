@@ -8,7 +8,8 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from ..database import get_session
-from ..models import Hackathon, StickyItem
+from ..models import Hackathon, StickyItem, User
+from .auth import get_current_user
 
 router = APIRouter(prefix="/api/sticky", tags=["sticky"])
 
@@ -28,28 +29,36 @@ class ReorderRequest(BaseModel):
     ids: List[int]
 
 
-def _ordered(session: Session) -> List[StickyItem]:
-    rows = session.exec(select(StickyItem)).all()
+def _ordered(session: Session, user_id: int) -> List[StickyItem]:
+    rows = session.exec(select(StickyItem).where(StickyItem.user_id == user_id)).all()
     rows.sort(key=lambda r: (r.position, r.id or 0))
     return rows
 
 
-def _next_position(session: Session) -> int:
-    rows = session.exec(select(StickyItem)).all()
+def _next_position(session: Session, user_id: int) -> int:
+    rows = session.exec(select(StickyItem).where(StickyItem.user_id == user_id)).all()
     return (max((r.position for r in rows), default=-1)) + 1
 
 
 @router.get("", response_model=List[StickyItem])
-def list_items(session: Session = Depends(get_session)):
-    return _ordered(session)
+def list_items(
+    session: Session = Depends(get_session), user: User = Depends(get_current_user)
+):
+    return _ordered(session, user.id)
 
 
 @router.post("", response_model=StickyItem)
-def create(payload: StickyCreate, session: Session = Depends(get_session)):
+def create(
+    payload: StickyCreate,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
     name = payload.name.strip()
     if not name:
         raise HTTPException(400, "Name is required")
-    item = StickyItem(name=name, date=payload.date, position=_next_position(session))
+    item = StickyItem(
+        name=name, date=payload.date, position=_next_position(session, user.id), user_id=user.id
+    )
     session.add(item)
     session.commit()
     session.refresh(item)
@@ -57,7 +66,11 @@ def create(payload: StickyCreate, session: Session = Depends(get_session)):
 
 
 @router.post("/from-hackathon/{hackathon_id}", response_model=StickyItem)
-def create_from_hackathon(hackathon_id: int, session: Session = Depends(get_session)):
+def create_from_hackathon(
+    hackathon_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
     h = session.get(Hackathon, hackathon_id)
     if not h:
         raise HTTPException(404, "Hackathon not found")
@@ -69,8 +82,9 @@ def create_from_hackathon(hackathon_id: int, session: Session = Depends(get_sess
     item = StickyItem(
         name=h.title,
         date=date_str,
-        position=_next_position(session),
+        position=_next_position(session, user.id),
         hackathon_id=h.id,
+        user_id=user.id,
     )
     session.add(item)
     session.commit()
@@ -79,9 +93,14 @@ def create_from_hackathon(hackathon_id: int, session: Session = Depends(get_sess
 
 
 @router.patch("/{item_id}", response_model=StickyItem)
-def update(item_id: int, payload: StickyUpdate, session: Session = Depends(get_session)):
+def update(
+    item_id: int,
+    payload: StickyUpdate,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
     item = session.get(StickyItem, item_id)
-    if not item:
+    if not item or item.user_id != user.id:
         raise HTTPException(404, "Item not found")
     if payload.name is not None:
         item.name = payload.name
@@ -96,20 +115,28 @@ def update(item_id: int, payload: StickyUpdate, session: Session = Depends(get_s
 
 
 @router.put("/reorder", response_model=List[StickyItem])
-def reorder(payload: ReorderRequest, session: Session = Depends(get_session)):
+def reorder(
+    payload: ReorderRequest,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
     for pos, item_id in enumerate(payload.ids):
         item = session.get(StickyItem, item_id)
-        if item:
+        if item and item.user_id == user.id:
             item.position = pos
             session.add(item)
     session.commit()
-    return _ordered(session)
+    return _ordered(session, user.id)
 
 
 @router.delete("/{item_id}")
-def delete(item_id: int, session: Session = Depends(get_session)):
+def delete(
+    item_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
     item = session.get(StickyItem, item_id)
-    if not item:
+    if not item or item.user_id != user.id:
         raise HTTPException(404, "Item not found")
     session.delete(item)
     session.commit()

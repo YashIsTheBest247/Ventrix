@@ -1,0 +1,6 @@
+INFO:     127.0.0.1:54171 - "POST /api/auth/signup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "POST /api/auth/signup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "POST /api/notes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "GET /api/notes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "GET /api/notes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "GET /api/notes HTTP/1.1" 401 Unauthorized

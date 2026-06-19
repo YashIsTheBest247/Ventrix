@@ -6,7 +6,7 @@ from typing import Iterable, List
 from sqlmodel import Session, select
 
 from ..config import settings
-from ..models import Hackathon, NotificationLog
+from ..models import Hackathon, NotificationLog, User
 from . import notifier
 
 AI_KEYWORDS = (
@@ -87,34 +87,43 @@ def _rules_for(h: Hackathon) -> List[tuple[str, str, str]]:
 
 def run_alerts(session: Session, hackathons: Iterable[Hackathon]) -> int:
     """Evaluate the watchlist rules against the given (usually newly-added)
-    hackathons and create deduped notifications. Returns count created."""
+    hackathons and create a deduped notification for EACH user. Returns count."""
+    users = session.exec(select(User)).all()
+    if not users:
+        return 0
+
     created = 0
     for h in hackathons:
         if h.id is None:
             continue
-        for kind, title, body in _rules_for(h):
-            dedupe = f"alert:{kind}:{h.id}"
-            exists = session.exec(
-                select(NotificationLog).where(NotificationLog.dedupe_key == dedupe)
-            ).first()
-            if exists:
-                continue
-            emailed = False
-            try:
-                emailed = notifier.send_email(title, body)
-            except Exception:
+        rules = _rules_for(h)
+        if not rules:
+            continue
+        for u in users:
+            for kind, title, body in rules:
+                dedupe = f"alert:{u.id}:{kind}:{h.id}"
+                exists = session.exec(
+                    select(NotificationLog).where(NotificationLog.dedupe_key == dedupe)
+                ).first()
+                if exists:
+                    continue
                 emailed = False
-            session.add(
-                NotificationLog(
-                    hackathon_id=h.id,
-                    kind=kind,
-                    title=title,
-                    body=body,
-                    emailed=emailed,
-                    dedupe_key=dedupe,
+                try:
+                    emailed = notifier.send_email(title, body, to=u.email)
+                except Exception:
+                    emailed = False
+                session.add(
+                    NotificationLog(
+                        user_id=u.id,
+                        hackathon_id=h.id,
+                        kind=kind,
+                        title=title,
+                        body=body,
+                        emailed=emailed,
+                        dedupe_key=dedupe,
+                    )
                 )
-            )
-            created += 1
+                created += 1
     if created:
         session.commit()
     return created

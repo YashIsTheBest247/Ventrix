@@ -8,16 +8,19 @@ from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from ..database import get_session
-from ..models import Hackathon, Registration
+from ..models import Hackathon, Registration, User
 from ..schemas import HackathonRead, ManualAddRequest, ScrapeResult
 from ..scrapers import detail, registry
+from .auth import get_current_user
 
 router = APIRouter(prefix="/api/hackathons", tags=["hackathons"])
 
 
-def enrich(session: Session, h: Hackathon) -> HackathonRead:
+def enrich(session: Session, h: Hackathon, user_id: int) -> HackathonRead:
     reg = session.exec(
-        select(Registration).where(Registration.hackathon_id == h.id)
+        select(Registration).where(
+            Registration.hackathon_id == h.id, Registration.user_id == user_id
+        )
     ).first()
     out = HackathonRead.model_validate(h)
     out.registered = reg is not None
@@ -33,7 +36,6 @@ def _is_india(e: HackathonRead) -> bool:
 
 
 def _region_priority(e: HackathonRead) -> int:
-    """India-online first, then India, then online elsewhere, then the rest."""
     india = _is_india(e)
     online = e.is_online
     if india and online:
@@ -48,6 +50,7 @@ def _region_priority(e: HackathonRead) -> int:
 @router.get("", response_model=List[HackathonRead])
 def list_hackathons(
     session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
     source: Optional[str] = None,
     registered: Optional[bool] = None,
     search: Optional[str] = None,
@@ -70,19 +73,15 @@ def list_hackathons(
         )
     rows = session.exec(stmt).all()
 
-    enriched = [enrich(session, h) for h in rows]
+    enriched = [enrich(session, h, user.id) for h in rows]
     if registered is not None:
         enriched = [e for e in enriched if e.registered == registered]
     if hide_closed:
-        # Drop hackathons whose deadline is already in the past. Undated ones
-        # (deadline unknown) are kept — we can't prove they're closed.
         enriched = [
-            e
-            for e in enriched
+            e for e in enriched
             if e.days_until_deadline is None or e.days_until_deadline >= 0
         ]
 
-    # Sort: India-online first, then by nearest deadline (undated last).
     def sort_key(e: HackathonRead):
         d = e.days_until_deadline
         return (_region_priority(e), d is None, d if d is not None else 1_000_000)
@@ -92,26 +91,33 @@ def list_hackathons(
 
 
 @router.get("/{hackathon_id}", response_model=HackathonRead)
-def get_hackathon(hackathon_id: int, session: Session = Depends(get_session)):
+def get_hackathon(
+    hackathon_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
     h = session.get(Hackathon, hackathon_id)
     if not h:
         raise HTTPException(404, "Hackathon not found")
-    return enrich(session, h)
+    return enrich(session, h, user.id)
 
 
 @router.post("/scrape", response_model=List[ScrapeResult])
 def scrape(
     session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
     sources: Optional[List[str]] = Query(None),
 ):
-    """Run the discovery scrapers (all platforms by default)."""
     results = registry.run_all(session, sources)
     return [ScrapeResult(**r) for r in results]
 
 
 @router.post("/manual", response_model=HackathonRead)
-def manual_add(payload: ManualAddRequest, session: Session = Depends(get_session)):
-    """Add a hackathon by URL (scraped for details) or by bare title."""
+def manual_add(
+    payload: ManualAddRequest,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
     if not payload.url and not payload.title:
         raise HTTPException(400, "Provide a url or a title")
 
@@ -140,7 +146,7 @@ def manual_add(payload: ManualAddRequest, session: Session = Depends(get_session
     else:
         h = Hackathon(
             source="manual",
-            source_uid=f"manual:{payload.title}",
+            source_uid=f"manual:{user.id}:{payload.title}",
             title=payload.title or "Untitled",
             url=payload.url or "",
         )
@@ -151,24 +157,34 @@ def manual_add(payload: ManualAddRequest, session: Session = Depends(get_session
 
     if payload.auto_register:
         already = session.exec(
-            select(Registration).where(Registration.hackathon_id == h.id)
+            select(Registration).where(
+                Registration.hackathon_id == h.id, Registration.user_id == user.id
+            )
         ).first()
         if not already:
-            session.add(Registration(hackathon_id=h.id, source="manual"))
+            session.add(Registration(hackathon_id=h.id, user_id=user.id, source="manual"))
             session.commit()
 
-    return enrich(session, h)
+    return enrich(session, h, user.id)
 
 
 @router.delete("/{hackathon_id}")
-def delete_hackathon(hackathon_id: int, session: Session = Depends(get_session)):
+def delete_hackathon(
+    hackathon_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    """Remove this hackathon from the current user's list (untrack). The shared
+    scraped catalogue is never deleted; a user only manages their own tracking."""
     h = session.get(Hackathon, hackathon_id)
     if not h:
         raise HTTPException(404, "Hackathon not found")
-    for reg in session.exec(
-        select(Registration).where(Registration.hackathon_id == hackathon_id)
-    ).all():
+    reg = session.exec(
+        select(Registration).where(
+            Registration.hackathon_id == hackathon_id, Registration.user_id == user.id
+        )
+    ).first()
+    if reg:
         session.delete(reg)
-    session.delete(h)
-    session.commit()
+        session.commit()
     return {"ok": True}

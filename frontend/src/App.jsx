@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { api } from "./api.js";
+import { api, AUTH_TOKEN_KEY } from "./api.js";
 import NotificationsDrawer from "./components/NotificationsDrawer.jsx";
 import PipelineArt from "./components/PipelineArt.jsx";
 import StickyPad from "./components/StickyPad.jsx";
@@ -21,6 +21,7 @@ export default function App() {
   const [theme, setTheme] = useState(
     () => document.documentElement.dataset.theme || "light"
   );
+  const [email, setEmail] = useState("");
   const toastTimer = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -44,6 +45,14 @@ export default function App() {
     setTheme(next);
     document.documentElement.dataset.theme = next;
     localStorage.setItem("ventrix_theme", next);
+  }
+
+  async function logout() {
+    try {
+      await api.logout();
+    } catch (_) {}
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    window.dispatchEvent(new Event("ventrix-unauthorized"));
   }
 
   const showToast = useCallback((msg) => {
@@ -73,6 +82,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    api.me().then((u) => setEmail(u.email)).catch(() => {});
     api.checkDeadlines().catch(() => {});
     refreshBadges();
     const t = setInterval(refreshBadges, 60000);
@@ -136,6 +146,14 @@ export default function App() {
             >
               <BellNavIcon />
               {unread > 0 && <span className="badge">{unread}</span>}
+            </button>
+            <button
+              className="bell"
+              onClick={logout}
+              aria-label="Log out"
+              title={email ? `Log out (${email})` : "Log out"}
+            >
+              <LogoutIcon />
             </button>
           </div>
         </div>
@@ -287,6 +305,15 @@ function SunIcon() {
     <svg viewBox="0 0 24 24" {...S} aria-hidden="true">
       <circle cx="12" cy="12" r="4.2" />
       <path d="M12 2.5 V5 M12 19 V21.5 M2.5 12 H5 M19 12 H21.5 M5.2 5.2 L7 7 M17 17 L18.8 18.8 M18.8 5.2 L17 7 M7 17 L5.2 18.8" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <path d="M15 4 H6 V20 H15" />
+      <path d="M10 12 H20 M17 9 L20 12 L17 15" />
     </svg>
   );
 }
