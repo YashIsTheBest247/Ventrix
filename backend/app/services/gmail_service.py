@@ -22,6 +22,7 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 TOKEN_KEY = "gmail_token"
 STATE_KEY = "gmail_oauth_state"
+VERIFIER_KEY = "gmail_code_verifier"
 
 # Senders that mean "you registered for a hackathon".
 SENDER_QUERY = (
@@ -122,6 +123,7 @@ def _save_credentials(session: Session, creds) -> None:
 def disconnect(session: Session) -> None:
     _delete(session, TOKEN_KEY)
     _delete(session, STATE_KEY)
+    _delete(session, VERIFIER_KEY)
 
 
 # ── connect: local desktop flow OR web redirect flow ─────
@@ -153,6 +155,10 @@ def build_auth_url(session: Session) -> dict:
         access_type="offline", include_granted_scopes="true", prompt="consent"
     )
     _set(session, STATE_KEY, state)
+    # PKCE: the verifier generated here must be replayed at token exchange,
+    # which happens in a separate request — so persist it.
+    if getattr(flow, "code_verifier", None):
+        _set(session, VERIFIER_KEY, flow.code_verifier)
     return {"ok": True, "auth_url": auth_url}
 
 
@@ -166,6 +172,10 @@ def exchange_code(session: Session, code: str, state: Optional[str]) -> dict:
         flow = Flow.from_client_config(
             config, scopes=SCOPES, redirect_uri=settings.gmail_redirect_uri, state=state
         )
+        # Replay the PKCE verifier saved when the auth URL was built.
+        verifier = _get(session, VERIFIER_KEY)
+        if verifier:
+            flow.code_verifier = verifier
         flow.fetch_token(code=code)
         _save_credentials(session, flow.credentials)
         return {"ok": True}
