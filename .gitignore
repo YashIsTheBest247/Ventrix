@@ -1,0 +1,18 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+backend/hackify.db
+backend/.env
+backend/uvicorn.*.log
+
+# Google OAuth secrets / tokens — never commit
+backend/google_client_secret.json
+backend/google_token.json
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# Misc
+.DS_Store
