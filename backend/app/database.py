@@ -24,6 +24,32 @@ def init_db() -> None:
     from . import models  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
+    _ensure_columns()
+
+
+def _ensure_columns() -> None:
+    """Lightweight migration: add columns that create_all can't add to tables
+    that already exist (create_all only creates missing tables). Lets schema
+    changes like the per-user `user_id` roll out without dropping the DB.
+    Old rows get NULL user_id (owned by nobody → hidden), new rows are scoped."""
+    from sqlalchemy import inspect, text
+
+    wanted = {
+        "registration": [("user_id", "INTEGER")],
+        "note": [("user_id", "INTEGER")],
+        "stickyitem": [("user_id", "INTEGER")],
+        "notificationlog": [("user_id", "INTEGER")],
+    }
+    insp = inspect(engine)
+    tables = set(insp.get_table_names())
+    for table, cols in wanted.items():
+        if table not in tables:
+            continue
+        have = {c["name"] for c in insp.get_columns(table)}
+        for name, coltype in cols:
+            if name not in have:
+                with engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {coltype}"))
 
 
 def get_session():
