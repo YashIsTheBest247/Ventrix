@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { api, fmtDate } from "../api.js";
+import { useConfirm } from "../components/ConfirmProvider.jsx";
+import Select from "../components/Select.jsx";
 
 export default function Notes({ onToast }) {
+  const confirm = useConfirm();
   const [notes, setNotes] = useState([]);
   const [hackathons, setHackathons] = useState([]);
   const [title, setTitle] = useState("");
@@ -52,6 +55,13 @@ export default function Notes({ onToast }) {
   }
 
   async function remove(id) {
+    const ok = await confirm({
+      title: "Delete note?",
+      message: "This note will be permanently removed.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     await api.deleteNote(id);
     await load();
     onToast?.("Note deleted");
@@ -80,18 +90,15 @@ export default function Notes({ onToast }) {
           </div>
           <div className="field" style={{ flex: "0 0 240px" }}>
             <label>Pin to hackathon (optional)</label>
-            <select
-              className="input"
+            <Select
               value={hackathonId}
-              onChange={(e) => setHackathonId(e.target.value)}
-            >
-              <option value="">— none —</option>
-              {hackathons.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.title}
-                </option>
-              ))}
-            </select>
+              onChange={setHackathonId}
+              placeholder="— none —"
+              options={[
+                { value: "", label: "— none —" },
+                ...hackathons.map((h) => ({ value: h.id, label: h.title })),
+              ]}
+            />
           </div>
         </div>
         <div className="field">

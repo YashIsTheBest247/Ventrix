@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react";
 import { api, fmtDate } from "../api.js";
 
+const KIND_LABEL = {
+  deadline: "Closing soon",
+  new_ai: "New AI",
+  big_prize: "Big prize",
+  remote: "Remote",
+  system: "System",
+};
+
 export default function NotificationsDrawer({ open, onClose, onChanged }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  // Keep the drawer mounted through its exit so it can animate out.
+  const [render, setRender] = useState(open);
+  const [shown, setShown] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -15,7 +26,15 @@ export default function NotificationsDrawer({ open, onClose, onChanged }) {
   }
 
   useEffect(() => {
-    if (open) load();
+    if (open) {
+      setRender(true);
+      load();
+      const r = requestAnimationFrame(() => setShown(true));
+      return () => cancelAnimationFrame(r);
+    }
+    setShown(false);
+    const t = setTimeout(() => setRender(false), 300);
+    return () => clearTimeout(t);
   }, [open]);
 
   async function markAll() {
@@ -35,12 +54,15 @@ export default function NotificationsDrawer({ open, onClose, onChanged }) {
     }
   }
 
-  if (!open) return null;
+  if (!render) return null;
 
   return (
     <>
-      <div className="drawer-backdrop" onClick={onClose} />
-      <div className="drawer">
+      <div
+        className={`drawer-backdrop ${shown ? "show" : ""}`}
+        onClick={onClose}
+      />
+      <div className={`drawer ${shown ? "show" : ""}`}>
         <div className="row-between">
           <div>
             <h3>Notifications</h3>
@@ -70,6 +92,7 @@ export default function NotificationsDrawer({ open, onClose, onChanged }) {
 
         {items.map((n) => (
           <div className={`notif ${n.read ? "" : "unread"}`} key={n.id}>
+            <span className={`kind-tag kind-${n.kind}`}>{KIND_LABEL[n.kind] || n.kind}</span>
             <div className="nt">{n.title}</div>
             <div className="nb">{n.body}</div>
             <div className="nd">

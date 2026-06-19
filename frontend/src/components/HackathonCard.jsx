@@ -1,6 +1,8 @@
 import { api, deadlineClass, deadlineLabel, fmtDate } from "../api.js";
+import { useConfirm } from "./ConfirmProvider.jsx";
 
 export default function HackathonCard({ h, onChange, onToast }) {
+  const confirm = useConfirm();
   const dClass = deadlineClass(h.days_until_deadline);
   const deadline = h.registration_deadline || h.ends_at;
   const tags = (h.themes || "")
@@ -25,7 +27,13 @@ export default function HackathonCard({ h, onChange, onToast }) {
   }
 
   async function remove() {
-    if (!confirm(`Delete "${h.title}"?`)) return;
+    const ok = await confirm({
+      title: "Delete hackathon?",
+      message: `“${h.title}” will be removed from your list. This can't be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.deleteHackathon(h.id);
       onToast?.("Deleted");

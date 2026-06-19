@@ -20,9 +20,41 @@ class Settings(BaseSettings):
     reminder_email: str = ""
     reminder_days_before: str = "7,3,1"
 
+    # ── Watchlist alerts (fired on new hackathons after each scrape) ──
+    alert_new_ai: bool = True          # a new AI/ML hackathon appears
+    alert_big_prize: bool = True       # prize pool over alert_prize_min (USD)
+    alert_prize_min: int = 10000
+    alert_remote: bool = True          # a new remote/online hackathon opens
+    auto_scrape_hours: int = 6         # background re-scrape interval (0 = off)
+
     # Gmail OAuth
     google_client_secret_file: str = "google_client_secret.json"
     google_token_file: str = "google_token.json"
+
+    # ── AI problem-statement analyzer (all free options) ──────────────
+    # Provider: auto | gemini | groq | ollama | none
+    # "auto" picks whichever key/URL below is present, else falls back to a
+    # built-in heuristic analyzer (no key, no network).
+    ai_provider: str = "auto"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
+    ollama_url: str = ""  # e.g. http://localhost:11434
+    ollama_model: str = "llama3.1"
+
+    @property
+    def resolved_ai_provider(self) -> str:
+        p = (self.ai_provider or "auto").lower()
+        if p != "auto":
+            return p
+        if self.gemini_api_key:
+            return "gemini"
+        if self.groq_api_key:
+            return "groq"
+        if self.ollama_url:
+            return "ollama"
+        return "heuristic"
 
     @property
     def cors_origin_list(self) -> list[str]:

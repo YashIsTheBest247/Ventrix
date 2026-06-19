@@ -57,6 +57,11 @@ export const api = {
   markRead: (id) => req(`/notifications/${id}/read`, { method: "POST" }),
   markAllRead: () => req(`/notifications/read-all`, { method: "POST" }),
 
+  // analyzer
+  analyzeStatus: () => req(`/analyze/status`),
+  analyze: (payload) =>
+    req(`/analyze`, { method: "POST", body: JSON.stringify(payload) }),
+
   // gmail
   gmailStatus: () => req(`/gmail/status`),
   gmailConnect: () => req(`/gmail/connect`, { method: "POST" }),

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { api } from "./api.js";
 import NotificationsDrawer from "./components/NotificationsDrawer.jsx";
 import PipelineArt from "./components/PipelineArt.jsx";
@@ -7,6 +8,7 @@ import Discover from "./pages/Discover.jsx";
 import Registered from "./pages/Registered.jsx";
 import Deadlines from "./pages/Deadlines.jsx";
 import Notes from "./pages/Notes.jsx";
+import Analyze from "./pages/Analyze.jsx";
 
 export default function App() {
   const [search, setSearch] = useState("");
@@ -74,6 +76,9 @@ export default function App() {
             <NavLink to="/notes" aria-label="Notes" title="Notes">
               <NoteNavIcon />
             </NavLink>
+            <NavLink to="/analyze" aria-label="Analyzer" title="Problem analyzer">
+              <BulbIcon />
+            </NavLink>
           </nav>
 
           <div className="spacer" />
@@ -102,9 +107,9 @@ export default function App() {
           <div className="hero">
             <div className="hero-left">
               <h1 className="hero-title">
-                <span className="heavy">Hackathon</span>
-                <span className="light">deadline</span>
-                <span className="light">tracker</span>
+                <span className="heavy">track </span>
+                <span className="light">build</span>
+                <span className="light">triumph</span>
               </h1>
               <div className="hero-pills">
                 <div className="hero-pill">
@@ -126,15 +131,27 @@ export default function App() {
         )}
       </div>
 
-      <Routes>
-        <Route path="/" element={<Discover search={search} onToast={showToast} />} />
-        <Route
-          path="/registered"
-          element={<Registered onToast={showToast} onChanged={refreshBadges} />}
-        />
-        <Route path="/deadlines" element={<Deadlines onToast={showToast} />} />
-        <Route path="/notes" element={<Notes onToast={showToast} />} />
-      </Routes>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={location.pathname}
+          className="page-anim"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.28, ease: [0.22, 0.8, 0.3, 1] }}
+        >
+          <Routes location={location}>
+            <Route path="/" element={<Discover search={search} onToast={showToast} />} />
+            <Route
+              path="/registered"
+              element={<Registered onToast={showToast} onChanged={refreshBadges} />}
+            />
+            <Route path="/deadlines" element={<Deadlines onToast={showToast} />} />
+            <Route path="/notes" element={<Notes onToast={showToast} />} />
+            <Route path="/analyze" element={<Analyze onToast={showToast} />} />
+          </Routes>
+        </motion.div>
+      </AnimatePresence>
 
       <NotificationsDrawer
         open={drawerOpen}
@@ -214,6 +231,15 @@ function BellNavIcon() {
     <svg viewBox="0 0 24 24" {...S} aria-hidden="true">
       <path d="M6 16 V11 a6 6 0 0 1 12 0 V16 L20 18 H4 Z" />
       <path d="M10 21 a2.2 2.2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+function BulbIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <path d="M9 18 H15 M10 21 H14" />
+      <path d="M12 3 a6 6 0 0 0 -4 10.5 C8.8 14.3 9 15 9 16 H15 C15 15 15.2 14.3 16 13.5 A6 6 0 0 0 12 3 Z" />
     </svg>
   );
 }

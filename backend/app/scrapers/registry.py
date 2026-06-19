@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Callable, Dict, List
 
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from ..models import Hackathon
 from .base import ScrapedHackathon
@@ -18,8 +18,8 @@ SCRAPERS: Dict[str, Callable[[], List[ScrapedHackathon]]] = {
 }
 
 
-def upsert(session: Session, item: ScrapedHackathon) -> str:
-    """Insert or update one scraped hackathon. Returns 'added' or 'updated'."""
+def upsert(session: Session, item: ScrapedHackathon) -> tuple[str, Hackathon]:
+    """Insert or update one scraped hackathon. Returns ('added'|'updated', row)."""
     existing = session.exec(
         select(Hackathon).where(
             Hackathon.source == item.source,
@@ -35,14 +35,14 @@ def upsert(session: Session, item: ScrapedHackathon) -> str:
                 setattr(existing, key, value)
         existing.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         session.add(existing)
-        return "updated"
+        return "updated", existing
 
     row = Hackathon(**data)
     session.add(row)
-    return "added"
+    return "added", row
 
 
-def run_one(session: Session, name: str) -> dict:
+def run_one(session: Session, name: str, added_sink: list | None = None) -> dict:
     fn = SCRAPERS.get(name)
     if not fn:
         return {"source": name, "found": 0, "added": 0, "updated": 0, "error": "unknown source"}
@@ -53,13 +53,33 @@ def run_one(session: Session, name: str) -> dict:
 
     added = updated = 0
     for item in items:
-        result = upsert(session, item)
+        result, row = upsert(session, item)
         added += result == "added"
         updated += result == "updated"
+        if result == "added" and added_sink is not None:
+            added_sink.append(row)
     session.commit()
     return {"source": name, "found": len(items), "added": added, "updated": updated, "error": None}
 
 
-def run_all(session: Session, sources: List[str] | None = None) -> List[dict]:
+def run_all(
+    session: Session,
+    sources: List[str] | None = None,
+    emit_alerts: bool = True,
+) -> List[dict]:
     names = sources or list(SCRAPERS.keys())
-    return [run_one(session, n) for n in names]
+
+    # Treat the very first scrape (empty DB) as a baseline — don't alert on the
+    # whole initial catalogue; only alert on hackathons that appear afterwards.
+    existing_count = session.exec(select(func.count()).select_from(Hackathon)).one()
+    is_seed = (existing_count or 0) == 0
+
+    added_rows: list[Hackathon] = []
+    results = [run_one(session, n, added_rows) for n in names]
+
+    if emit_alerts and not is_seed and added_rows:
+        from ..services import alerts  # local import avoids a cycle
+
+        alerts.run_alerts(session, added_rows)
+
+    return results
