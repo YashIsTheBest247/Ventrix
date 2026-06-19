@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from ..database import get_session
@@ -57,8 +58,16 @@ def list_hackathons(
     if source:
         stmt = stmt.where(Hackathon.source == source)
     if search:
-        like = f"%{search.lower()}%"
-        stmt = stmt.where(Hackathon.title.ilike(like))
+        like = f"%{search.strip()}%"
+        stmt = stmt.where(
+            or_(
+                Hackathon.title.ilike(like),
+                Hackathon.description.ilike(like),
+                Hackathon.themes.ilike(like),
+                Hackathon.organizer.ilike(like),
+                Hackathon.location.ilike(like),
+            )
+        )
     rows = session.exec(stmt).all()
 
     enriched = [enrich(session, h) for h in rows]
