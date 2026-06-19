@@ -1884,20 +1884,137 @@ button {
   margin-bottom: 18px;
 }
 
-@media (max-width: 860px) {
+/* Tablet: stack the hero */
+@media (max-width: 900px) {
   .hero {
     grid-template-columns: 1fr;
   }
-  .hero-title {
-    font-size: 54px;
+  .hero-media {
+    border-top: 1px solid var(--line);
   }
   .hero-left {
     min-height: 0;
   }
+  .hero-title {
+    font-size: 56px;
+  }
+}
+
+/* Phones: wrap the topbar, single-column grids, stacked forms */
+@media (max-width: 720px) {
+  .shell {
+    padding: 14px 12px 64px;
+  }
+  .frame {
+    border-radius: 22px;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 14px;
+  }
+  .brand {
+    order: 1;
+    font-size: 20px;
+  }
+  .topbar .spacer {
+    order: 2;
+  }
+  .topbar-right {
+    order: 3;
+    gap: 8px;
+  }
+  /* nav icons drop to their own full-width row */
   .iconnav {
-    margin-left: 6px;
+    order: 4;
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+    gap: 2px;
+  }
+  .iconnav a {
+    width: 40px;
+    height: 40px;
   }
   .search {
     display: none;
+  }
+
+  .hero-left {
+    padding: 24px 22px 28px;
+  }
+  .hero-title {
+    font-size: 46px;
+    line-height: 0.96;
+  }
+  .hero-media {
+    padding: 24px 14px;
+  }
+
+  .section-title {
+    font-size: 26px;
+  }
+  .grid,
+  .notes-grid,
+  .analyze-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* stack inline form rows */
+  .inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .inline .field {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+  }
+  .inline > .btn {
+    width: 100%;
+  }
+
+  /* deadline rows wrap instead of squashing */
+  .dl-row {
+    flex-wrap: wrap;
+  }
+  .dl-row .when {
+    text-align: left;
+  }
+}
+
+/* Small phones */
+@media (max-width: 420px) {
+  .hero-title {
+    font-size: 38px;
+  }
+  .hero-pill {
+    font-size: 15px;
+    padding: 11px 18px;
+  }
+  .bell {
+    width: 40px;
+    height: 40px;
+  }
+  .gate-card {
+    padding: 28px 20px 22px;
+  }
+  .gate-title {
+    font-size: 26px;
+  }
+  .otp {
+    gap: 6px;
+  }
+  .otp-box {
+    width: 40px;
+    height: 50px;
+    font-size: 20px;
+  }
+  /* compact the floating sticky button */
+  .sticky-fab span {
+    display: none;
+  }
+  .sticky-fab {
+    padding: 12px;
   }
 }
