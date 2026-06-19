@@ -56,6 +56,18 @@ class Note(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utcnow)
 
 
+class StickyItem(SQLModel, table=True):
+    """A pinned reminder on the floating sticky pad (event name + date + done)."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    date: Optional[str] = None          # ISO "YYYY-MM-DD" or free text
+    done: bool = False
+    position: int = 0                   # manual drag order (ascending)
+    hackathon_id: Optional[int] = Field(default=None, foreign_key="hackathon.id")
+    created_at: datetime = Field(default_factory=utcnow)
+
+
 class NotificationLog(SQLModel, table=True):
     """In-app + email notifications. `read` drives the in-app unread badge."""
 

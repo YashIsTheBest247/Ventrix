@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { api } from "./api.js";
 import NotificationsDrawer from "./components/NotificationsDrawer.jsx";
 import PipelineArt from "./components/PipelineArt.jsx";
+import StickyPad from "./components/StickyPad.jsx";
 import Discover from "./pages/Discover.jsx";
 import Registered from "./pages/Registered.jsx";
 import Deadlines from "./pages/Deadlines.jsx";
@@ -160,6 +161,8 @@ export default function App() {
       />
 
       {toast && <div className="toast">{toast}</div>}
+
+      <StickyPad />
     </div>
   );
 }

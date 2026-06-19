@@ -57,6 +57,18 @@ export const api = {
   markRead: (id) => req(`/notifications/${id}/read`, { method: "POST" }),
   markAllRead: () => req(`/notifications/read-all`, { method: "POST" }),
 
+  // sticky pad
+  listSticky: () => req(`/sticky`),
+  createSticky: (payload) =>
+    req(`/sticky`, { method: "POST", body: JSON.stringify(payload) }),
+  stickyFromHackathon: (id) =>
+    req(`/sticky/from-hackathon/${id}`, { method: "POST" }),
+  updateSticky: (id, payload) =>
+    req(`/sticky/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  reorderSticky: (ids) =>
+    req(`/sticky/reorder`, { method: "PUT", body: JSON.stringify({ ids }) }),
+  deleteSticky: (id) => req(`/sticky/${id}`, { method: "DELETE" }),
+
   // analyzer
   analyzeStatus: () => req(`/analyze/status`),
   analyze: (payload) =>

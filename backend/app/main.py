@@ -8,7 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .database import init_db
-from .routers import analyze, gmail, hackathons, notes, notifications, registrations
+from .routers import (
+    analyze,
+    gmail,
+    hackathons,
+    notes,
+    notifications,
+    registrations,
+    sticky,
+)
 from .services.scheduler import shutdown_scheduler, start_scheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +46,7 @@ app.include_router(notes.router)
 app.include_router(notifications.router)
 app.include_router(gmail.router)
 app.include_router(analyze.router)
+app.include_router(sticky.router)
 
 
 @app.get("/api/health")
