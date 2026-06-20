@@ -12,6 +12,7 @@ export default function AuthGate({ children }) {
   const [busy, setBusy] = useState(false);
   const [introDone, setIntroDone] = useState(false);
   const [booted, setBooted] = useState(false);
+  const [showPw, setShowPw] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -107,14 +108,25 @@ export default function AuthGate({ children }) {
             autoComplete="email"
             onChange={(e) => setEmail(e.target.value)}
           />
-          <input
-            className="input"
-            type="password"
-            placeholder="Password"
-            value={password}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="pw-wrap">
+            <input
+              className="input"
+              type={showPw ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="pw-toggle"
+              onClick={() => setShowPw((s) => !s)}
+              aria-label={showPw ? "Hide password" : "Show password"}
+              tabIndex={-1}
+            >
+              {showPw ? <Eye /> : <EyeOff />}
+            </button>
+          </div>
         </div>
 
         {error && <div className="gate-error">{error}</div>}
@@ -146,6 +158,34 @@ function WaveMark() {
   return (
     <svg viewBox="0 0 34 24" width="34" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M2 6 L7 18 L12 8 L17 18 L22 8 L27 18 L32 6" />
+    </svg>
+  );
+}
+
+const EYE_S = {
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.7,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+};
+
+function Eye() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...EYE_S} aria-hidden="true">
+      <path d="M2 12 C5 6 9 4 12 4 C15 4 19 6 22 12 C19 18 15 20 12 20 C9 20 5 18 2 12 Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOff() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...EYE_S} aria-hidden="true">
+      <path d="M4 5 L20 19" />
+      <path d="M9.5 5.4 C10.3 5.1 11.1 5 12 5 C15 5 19 7 22 13 C21.2 14.6 20.2 15.9 19.1 16.9" />
+      <path d="M6.3 7.8 C4.6 9 3.2 10.7 2 13 C5 19 9 21 12 21 C13.4 21 14.9 20.6 16.3 19.8" />
+      <path d="M9.9 10.1 A3 3 0 0 0 14 14.2" />
     </svg>
   );
 }

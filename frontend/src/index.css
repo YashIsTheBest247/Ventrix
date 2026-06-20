@@ -1501,6 +1501,36 @@ button {
   padding: 13px 15px;
 }
 
+.pw-wrap {
+  position: relative;
+}
+
+.pw-wrap .input {
+  padding-right: 46px;
+  width: 100%;
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.pw-toggle:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
 .auth-switch {
   border: none;
   background: transparent;
