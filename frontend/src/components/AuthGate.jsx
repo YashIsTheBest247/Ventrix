@@ -11,8 +11,9 @@ export default function AuthGate({ children }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [introDone, setIntroDone] = useState(false);
-  const [booted, setBooted] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  // `slow` shows the boot screen only when a backend call is taking a while.
+  const [slow, setSlow] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -20,22 +21,28 @@ export default function AuthGate({ children }) {
       setChecking(false);
       return;
     }
+    // Token check: only surface the boot screen if it's slow (cold backend).
+    const t = setTimeout(() => alive && setSlow(true), 500);
     api
       .me()
       .then(() => alive && setAuthed(true))
       .catch(() => localStorage.removeItem(AUTH_TOKEN_KEY))
-      .finally(() => alive && setChecking(false));
+      .finally(() => {
+        clearTimeout(t);
+        if (alive) {
+          setSlow(false);
+          setChecking(false);
+        }
+      });
     return () => {
       alive = false;
+      clearTimeout(t);
     };
   }, []);
 
   // If any API call 401s later, drop back to the gate.
   useEffect(() => {
-    const onUnauth = () => {
-      setAuthed(false);
-      setBooted(false);
-    };
+    const onUnauth = () => setAuthed(false);
     window.addEventListener("ventrix-unauthorized", onUnauth);
     return () => window.removeEventListener("ventrix-unauthorized", onUnauth);
   }, []);
@@ -45,6 +52,8 @@ export default function AuthGate({ children }) {
     setError("");
     if (!email || !password) return setError("Enter your email and password.");
     setBusy(true);
+    // Show the boot screen only if the request is slow (e.g. cold backend).
+    const t = setTimeout(() => setSlow(true), 500);
     try {
       const fn = mode === "signup" ? api.signup : api.login;
       const res = await fn(email.trim(), password);
@@ -53,13 +62,15 @@ export default function AuthGate({ children }) {
     } catch (err) {
       setError(err.message || "Something went wrong.");
     } finally {
+      clearTimeout(t);
+      setSlow(false);
       setBusy(false);
     }
   }
 
+  if (authed) return <div className="app-enter">{children}</div>;
+  if (slow) return <BootScreen />;
   if (checking) return null;
-  if (authed && !booted) return <BootScreen onReady={() => setBooted(true)} />;
-  if (authed) return children;
 
   return (
     <div className="gate">
