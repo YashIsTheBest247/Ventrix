@@ -33,6 +33,9 @@ async function req(path, options = {}) {
 }
 
 export const api = {
+  // health (open) — also used to wake a cold backend
+  health: () => req(`/health`),
+
   // auth
   me: () => req(`/auth/me`),
   login: (email, password) =>

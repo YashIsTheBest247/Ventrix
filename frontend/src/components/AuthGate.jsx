@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, AUTH_TOKEN_KEY } from "../api.js";
+import BootScreen from "./BootScreen.jsx";
 
 export default function AuthGate({ children }) {
   const [checking, setChecking] = useState(true);
@@ -10,6 +11,7 @@ export default function AuthGate({ children }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [introDone, setIntroDone] = useState(false);
+  const [booted, setBooted] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -29,7 +31,10 @@ export default function AuthGate({ children }) {
 
   // If any API call 401s later, drop back to the gate.
   useEffect(() => {
-    const onUnauth = () => setAuthed(false);
+    const onUnauth = () => {
+      setAuthed(false);
+      setBooted(false);
+    };
     window.addEventListener("ventrix-unauthorized", onUnauth);
     return () => window.removeEventListener("ventrix-unauthorized", onUnauth);
   }, []);
@@ -52,6 +57,7 @@ export default function AuthGate({ children }) {
   }
 
   if (checking) return null;
+  if (authed && !booted) return <BootScreen onReady={() => setBooted(true)} />;
   if (authed) return children;
 
   return (
